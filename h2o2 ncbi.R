@@ -8,15 +8,14 @@ library(GEOquery)
 library(limma)
 
 # load series and platform data from GEO
+# Read MicroArray data from local 
 
-gset <- getGEO("GSE19983", GSEMatrix =TRUE, AnnotGPL=FALSE)
-if (length(gset) > 1) idx <- grep("GPL9956", attr(gset, "names")) else idx <- 1
-gset <- gset[[idx]]
+gset <- getGEO(file="GSE19983_series_matrix.txt.gz", GSEMatrix =TRUE, AnnotGPL=FALSE)
 
 # make proper column names to match toptable 
 fvarLabels(gset) <- make.names(fvarLabels(gset))
 
-# group names for all samples
+# group names for Control and H2O2 treat 1 hr
 gsms <- "XXX111XXX000XXXXXXXXX"
 sml <- c()
 for (i in 1:nchar(gsms)) { sml[i] <- substr(gsms,i,i) }
@@ -49,7 +48,17 @@ tT <- topTable(fit2, adjust="fdr", number=42417)
 
 tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","SEQUENCE","GB_ACC","ORF","miRNA_ID"))
 
+# Clean junk variable
+rm(fl,sml,sel,LogC,qx,gsms,i,cont.matrix,design,fit,fit2)
+
+##################################################################################################
+library(magrittr)
+
+# select differential express gene in MicroArray
+# True : differential gene
 select <- tT$adj.P.Val<0.05 & (tT$logFC>1|tT$logFC< -1)
+
+# -log10(adj.pvalue) transformation
 LOG10 <- sapply(tT$adj.P.Val,function(x){
   return(-log10(x))
 })
@@ -57,14 +66,22 @@ LOG10 <- sapply(tT$adj.P.Val,function(x){
 tT <- cbind(tT,LOG10)
 tT <- cbind(tT,select)
 
+# Fillter by select
 gene <- tT[tT$select,]
 
-library(magrittr)
-name <- data.frame(strsplit(gene$ID,split="|",fixed=T))
-gene <- cbind(gene,name[,1])
+# Extract RAP-ID from gene$ID
+name <- sapply(gene$ID,function(x){
+  ID = strsplit(x,split="|",fixed=T)
+  ID = ID[[1]][1]
+})
+name <- data.frame(name)
+gene <- cbind(name,gene)
 
+########################################################################################
+
+## Visualization of MicroArray data
 library(ggplot2)
-qplot(t$logFC,t$adj.P.Val)
+qplot(tT$logFC,tT$adj.P.Val)
 ggplot(tT,aes(x=logFC,y=LOG10,color=select),xlim=c(-2.5,2)) + geom_point()
 t$logFC
 write.table(tT, file="H2O2tT.csv", row.names=F, sep="\t")
@@ -77,15 +94,14 @@ library(GEOquery)
 
 # load series and platform data from GEO
 
-gset <- getGEO("GSE19983", GSEMatrix =TRUE, getGPL=FALSE)
-if (length(gset) > 1) idx <- grep("GPL9956", attr(gset, "names")) else idx <- 1
-gset <- gset[[idx]]
+gset <- getGEO(file="GSE19983_series_matrix.txt.gz", GSEMatrix =TRUE, AnnotGPL=FALSE)
+
 
 # group names for all samples in a series
 gsms <- "XXX111XXX000XXXXXXXXX"
 sml <- c()
 for (i in 1:nchar(gsms)) { sml[i] <- substr(gsms,i,i) }
-sml <- paste("G", sml, sep="")  set group names
+sml <- paste("G", sml, sep="")  #set group names
 
 # eliminate samples marked as "X"
 sel <- which(sml != "X")
