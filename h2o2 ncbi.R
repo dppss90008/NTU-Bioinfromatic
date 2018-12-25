@@ -44,7 +44,7 @@ fit <- lmFit(gset, design)
 cont.matrix <- makeContrasts(G1-G0, levels=design)
 fit2 <- contrasts.fit(fit, cont.matrix)
 fit2 <- eBayes(fit2, 0.01)
-tT <- topTable(fit2, adjust="fdr", number=42417)
+tT <- topTable(fit2, adjust="fdr", number=nrow(ex))
 
 tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","SEQUENCE","GB_ACC","ORF","miRNA_ID"))
 
@@ -52,7 +52,7 @@ tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","SEQUENCE",
 rm(fl,sml,sel,LogC,qx,gsms,i,cont.matrix,design,fit,fit2)
 
 ##################################################################################################
-library(magrittr)
+
 
 # select differential express gene in MicroArray
 # True : differential gene
@@ -82,11 +82,12 @@ gene <- cbind(name,gene)
 ## Visualization of MicroArray data
 library(ggplot2)
 qplot(tT$logFC,tT$adj.P.Val)
-ggplot(tT,aes(x=logFC,y=LOG10,color=select),xlim=c(-2.5,2)) + geom_point()
-t$logFC
-write.table(tT, file="H2O2tT.csv", row.names=F, sep="\t")
+ggplot(tT,aes(x=logFC,y=LOG10,color=select),xlim=c(-2.5,2)) + geom_point() + ylab("-log10(adj.Pvalue)")
 
 
+write.table(name, file="H2O2.csv", row.names=F, sep="\t")
+
+XD
 ################################################################
 #   Boxplot for selected GEO samples
 library(Biobase)

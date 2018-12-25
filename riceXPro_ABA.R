@@ -6,22 +6,40 @@
 library(Biobase)
 library(GEOquery)
 library(limma)
+library(magrittr)
 
 # load series and platform data from GEO
 
-gset <- getGEO("GSE39429", GSEMatrix =TRUE, AnnotGPL=FALSE)
-if (length(gset) > 1) idx <- grep("GPL6864", attr(gset, "names")) else idx <- 1
-gset <- gset[[idx]]
+gset <- getGEO(file="GSE39429_series_matrix.txt.gz", GSEMatrix =TRUE, AnnotGPL=FALSE)
+#if (length(gset) > 1) idx <- grep("GPL6864", attr(gset, "names")) else idx <- 1
+#gset <- gset[[idx]]
+gset2 <- gset
+gset <- gset2
+
+Hormone <- gset$description %>% as.vector()
+gsms <- c()
+for (i in Hormone) {
+  if (grepl("root at 0 min",i)) {
+    gsms <- c(gsms,"0")
+  }else if (grepl("root at 1 hr after jasmonic acid",i)){
+    gsms <- c(gsms,"1")
+  }else{
+    gsms <- c(gsms,"X")
+  }
+}
+
+sml <- gsms
+#gsms
 
 # make proper column names to match toptable 
 fvarLabels(gset) <- make.names(fvarLabels(gset))
 
 # group names for all samples
-gsms <- paste0("000XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-               "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-               "XXXXXXXXXXXXXXXXXXXXXXXXXX111XXXXXXXXXXXXXX")
-sml <- c()
-for (i in 1:nchar(gsms)) { sml[i] <- substr(gsms,i,i) }
+#gsms <- paste0("000XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+#               "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+#               "XXXXXXXXXXXXXXXXXXXXXXXXXX111XXXXXXXXXXXXXX")
+#sml <- c()
+#for (i in 1:nchar(gsms)) { sml[i] <- substr(gsms,i,i) }
 
 # eliminate samples marked as "X"
 sel <- which(sml != "X")
@@ -47,11 +65,12 @@ fit <- lmFit(gset, design)
 cont.matrix <- makeContrasts(G1-G0, levels=design)
 fit2 <- contrasts.fit(fit, cont.matrix)
 fit2 <- eBayes(fit2, 0.01)
-tT <- topTable(fit2, adjust="fdr", sort.by="B", number=999999999999)
+tT <- topTable(fit2, adjust="fdr", sort.by="B", number=nrow(ex))
+
 tT <- tT[tT$SEQUENCE!="",]
 
 
-select <- tT$adj.P.Val<0.05 & (tT$logFC>1|tT$logFC< -1)
+select <- tT$P.Value<0.05 & (tT$logFC>1|tT$logFC< -1)
 LOG10 <- sapply(tT$adj.P.Val,function(x){
   return(-log10(x))
 })
@@ -64,52 +83,18 @@ library(magrittr)
 name <- data.frame(strsplit(gene$Accessions,split="|",fixed=T)) %>% t()
 gene <- cbind(gene,name[,1])
 
-t(A)
+name <- sapply(gene$Accessions,function(x){
+  ID = strsplit(x,split="|",fixed=T)
+  ID = ID[[1]][1]
+})
 
-A %>% t()
+name <- data.frame(name)
+write.csv(name,file="JA_Shoot.csv")
+  
 library(ggplot2)
-qplot(t$logFC,t$adj.P.Val)
-ggplot(tT,aes(x=logFC,y=LOG10,color=select),xlim=c(-2.5,2)) + geom_point()
 
-tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","GB_ACC","ORF","miRNA_ID","SEQUENCE","SPOT_ID"))
-write.table(tT, file="ABA.csv", row.names=F, sep="\t")
-write.csv(name[,1],file="JAgene.csv")
+ggplot(tT,aes(x=logFC,y=LOG10,color=select),xlim=c(-2.5,2)) + geom_point() + ylab("-log10(P.value)")
 
-################################################################
-#   Boxplot for selected GEO samples
-library(Biobase)
-library(GEOquery)
 
-# load series and platform data from GEO
 
-gset <- getGEO("GSE39429", GSEMatrix =TRUE, getGPL=FALSE)
-if (length(gset) > 1) idx <- grep("GPL6864", attr(gset, "names")) else idx <- 1
-gset <- gset[[idx]]
-
-# group names for all samples in a series
-gsms <- paste0("000XXXXXXXX111XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-               "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-               "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-sml <- c()
-for (i in 1:nchar(gsms)) { sml[i] <- substr(gsms,i,i) }
-sml <- paste("G", sml, sep="")  set group names
-
-# eliminate samples marked as "X"
-sel <- which(sml != "X")
-sml <- sml[sel]
-gset <- gset[ ,sel]
-
-# order samples by group
-ex <- exprs(gset)[ , order(sml)]
-sml <- sml[order(sml)]
-fl <- as.factor(sml)
-labels <- c("crol","aba")
-
-# set parameters and draw the plot
-palette(c("#dfeaf4","#f4dfdf", "#AABBCC"))
-dev.new(width=4+dim(gset)[[2]]/5, height=6)
-par(mar=c(2+round(max(nchar(sampleNames(gset)))/2),4,2,1))
-title <- paste ("GSE39429", '/', annotation(gset), " selected samples", sep ='')
-boxplot(ex, boxwex=0.6, notch=T, main=title, outline=FALSE, las=2, col=fl)
-legend("topleft", labels, fill=palette(), bty="n")
 
