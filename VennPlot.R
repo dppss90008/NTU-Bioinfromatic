@@ -11,7 +11,7 @@ CK <- read.csv("CK_Root.csv")
 JA <- read.csv("JA_Root.csv")
 
 
-
+XD
 venn(list("H2O2"=H2O2$name,"ABA"=ABA$name,"GA"=GA$name,"Auxin"=Auxin$name,"BL"=BL$name,"CK"=CK$name,"JA"=JA$name), ilabels = TRUE, 
     zcolor =c("dark blue","white","dark red","white","white","white","white"), size = 25, cexil = 1.2, cexsn = 1.5);
 
