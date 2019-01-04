@@ -3,12 +3,12 @@
 H2O2 <- read.csv("H2O2.csv")
 
 
-ABA <- read.csv("ABA_Root.csv")
-GA <- read.csv("GA_Root.csv")
-Auxin <- read.csv("Auxin_Root.csv")
-BL <- read.csv("BL_Root.csv")
-CK <- read.csv("CK_Root.csv")
-JA <- read.csv("JA_Root.csv")
+ABA <- read.csv("ABA_Shoot.csv")
+GA <- read.csv("GA_Shoot.csv")
+Auxin <- read.csv("Auxin_Shoot.csv")
+BL <- read.csv("BL_Shoot.csv")
+CK <- read.csv("CK_Shoot.csv")
+JA <- read.csv("JA_Shoot.csv")
 
 
 
@@ -24,6 +24,12 @@ area <- getZones("0-----1") # list of length 2
 polygon(area[[1]], col="BLUE", opacity=0.3)
 
 Intr <- intersect(H2O2$name,JA$name)
+Intr <- intersect(Intr,ABA$name)
+Intr <- intersect(Intr,Auxin$name)
+Intr <- intersect(Intr,BL$name)
+Intr <- intersect(Intr,CK$name)
+Intr <- intersect(Intr,GA$name)
+
 write.csv(Intr,file="H2O2_JA.csv")
 
 
